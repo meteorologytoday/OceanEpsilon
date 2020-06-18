@@ -1,6 +1,7 @@
 using NCDatasets
 using ArgParse
 using JSON
+using Formatting
 
 function adjustLev(
     lev  :: AbstractArray{Float64, 1},
@@ -49,7 +50,7 @@ function interpInfo(
         throw(ErrorException("Cannot find target_lev: " * string(target_lev)))
     end
 
-    wgt_of_i = (lev[i+1] - target_lev) / (lev[i+1] - lev[i])
+    wgt_of_i = (lev[target_i+1] - target_lev) / (lev[target_i+1] - lev[target_i])
 
     return target_i, wgt_of_i
 
@@ -101,9 +102,9 @@ function parse_commandline()
             default = "m"
  
         "--lev-target"
-            help = "Level interpolated (in meter, positive number)."
-            arg_type = Float64
-            default = 50.0
+            help = "Level interpolated (in meter, positive number). If more than one target then use comma ',' to separate them"
+            arg_type = String
+            default = "50.0"
 
         "--time-range"
             help = "A range specifying the time. In format of [beg_time],[end_time]. Ex: 10 years of monthly data 1,120. `:` implies all data."
@@ -118,24 +119,25 @@ end
 parsed = parse_commandline()
 print(json(parsed, 4))
 
-lev_targets = parse(Float64, split(parsed["lev-target"], ","))
-wgt = zeros(Float64, length(lev_targets), 2)
+lev_targets = parse.(Float64, split(parsed["lev-target"], ","))
+wgt_i = zeros(Int64, length(lev_targets))
+wgt = zeros(Float64, length(lev_targets))
 
 Dataset(parsed["input-file"], "r") do ds
-    global lev, Δlev = adjustLev(ds[parsed["lev"]], parsed["lev-unit"])
+    global lev, Δlev = adjustLev( nomissing( ds[parsed["lev"]][:] ), parsed["lev-unit"])
     global Nx, Ny, Nt = size(ds[parsed["var"]])
 end
 
 if parsed["time-range"] == ":"
     time_range = 1:Nt
 else
-    time_range = parse(Int64, split(parsed["time-range"], ","))
+    time_range = parse.(Int64, split(parsed["time-range"], ","))
     time_range = time_range[1]:time_range[2]
 end
 
 # Generate interpolation information
 for i = 1:length(lev_targets)
-    wgt[i, 1], wgt[i, 2] = interpInfo(lev, lev_targets[i])
+    wgt_i[i], wgt[i] = interpInfo(lev, lev_targets[i])
 end
 
 result = zeros(Float64, Nx, Ny, length(lev_targets), Nt)
@@ -143,32 +145,39 @@ Dataset(parsed["input-file"], "r") do ds
    
     for l=1:length(lev_targets) 
 
-        upper_layer_k   = wgt[l, 1]
-        upper_layer_wgt = wgt[l, 2]
+
+
+        upper_layer_k   = Int64(wgt_i[l])
+        upper_layer_wgt = wgt[l]
 
         lower_layer_k   = upper_layer_k + 1
-        lower_layer_wgt = 1.0 - lower_layer_wgt
+        lower_layer_wgt = 1.0 - upper_layer_wgt
+        
+        println(format("Doing level: {:f}. Between layer {:d} and {:d}. Upper layer wgt: {:f}", lev_targets[l], upper_layer_k, lower_layer_k, upper_layer_wgt))
 
-        _data = ds[parsed["var"]][time_range, upper_layer_k:lower_layer_k, :, :] |> nomissing
+        println("Loading data...")
+        _data = nomissing(ds[parsed["var"]][:, :, upper_layer_k:lower_layer_k, time_range], NaN)
+        println("Interpolating...")
         for i=1:Nx, j=1:Ny, t=1:length(time_range)
-            result[i, j, l, t] = _data[i, j, upper_layer_k, t] * upper_layer_wgt
-                               + _data[i, j, lower_layer_k, t] * lower_layer_wgt
+            result[i, j, l, t] = _data[i, j, 1, t] * upper_layer_wgt
+                               + _data[i, j, 2, t] * lower_layer_wgt
         end
     end
+
+    println("Output result... ")
 
     Dataset(parsed["output-file"], "c") do ods
 
         defDim(ods, "Nx", Nx)
         defDim(ods, "Ny", Ny)
-        defDim(ods, "target_lev", length(target_lev))
+        defDim(ods, "lev_targets", length(lev_targets))
         defDim(ods, "time", Inf)
 
         for (varname, vardata, vardim, attrib) in [
-            ("lat",  ods[parsed["lat"]][:]  |> nomissing, ("Nx", "Ny"), Dict()),
-            ("lon",  ods[parsed["lon"]][:]  |> nomissing, ("Nx", "Ny"), Dict()),
-            ("mask", ods[parsed["mask"]][:] |> nomissing, ("Nx", "Ny"), Dict()),
-            ("target_lev", target_lev, ("target_lev",), Dict()),
-            (parsed["var"], result, ("Nx", "Ny", "target_lev", length(time_range)), Dict()),
+            ("lat",  ds[parsed["lat"]][:]  |> nomissing, ("Nx", "Ny"), Dict()),
+            ("lon",  ds[parsed["lon"]][:]  |> nomissing, ("Nx", "Ny"), Dict()),
+            ("lev_targets", lev_targets, ("lev_targets",), Dict()),
+            (parsed["var"], result, ("Nx", "Ny", "lev_targets", "time"), Dict()),
         ]
             println("Doing varname:", varname)
             var = defVar(ods, varname, Float64, vardim)

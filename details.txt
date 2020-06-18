@@ -1,0 +1,4 @@
+NCAR-CESM2  NCAR/CESM2/piControl/r1i1p1f1/Omon/wo/gn/latest/                            wo_Omon_CESM2_piControl_r1i1p1f1_gn_%04Y01-%04Y12.nc
+EC-Earth    EC-Earth-Consortium/EC-Earth3/piControl/r1i1p1f1/Omon/wo/gn/v20190712/wo    
+
+

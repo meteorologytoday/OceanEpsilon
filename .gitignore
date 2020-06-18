@@ -1,0 +1,15 @@
+*.log
+*.swp
+*.swo
+*.nc
+img/
+*.gz
+*.csv
+tmp
+*.hpp
+slurm.epilog*
+*.jld
+*.out
+*.png
+data/*
+*.jl~
