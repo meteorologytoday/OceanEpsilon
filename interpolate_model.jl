@@ -140,7 +140,8 @@ for i = 1:length(lev_targets)
     wgt_i[i], wgt[i] = interpInfo(lev, lev_targets[i])
 end
 
-result = zeros(Float64, Nx, Ny, length(lev_targets), Nt)
+result = zeros(Float64, Nx, Ny, length(lev_targets), length(time_range))
+
 Dataset(parsed["input-file"], "r") do ds
    
     for l=1:length(lev_targets) 
@@ -153,14 +154,14 @@ Dataset(parsed["input-file"], "r") do ds
         lower_layer_k   = upper_layer_k + 1
         lower_layer_wgt = 1.0 - upper_layer_wgt
         
-        println(format("Doing level: {:f}. Between layer {:d} and {:d}. Upper layer wgt: {:f}", lev_targets[l], upper_layer_k, lower_layer_k, upper_layer_wgt))
+        println(format("Doing level: {:f}. Between layer {:d} and {:d}. Upper layer wgt: {:f}. Lower layer wgt: {:f}.", lev_targets[l], upper_layer_k, lower_layer_k, upper_layer_wgt, lower_layer_wgt))
 
         println("Loading data...")
         _data = nomissing(ds[parsed["var"]][:, :, upper_layer_k:lower_layer_k, time_range], NaN)
         println("Interpolating...")
+       
         for i=1:Nx, j=1:Ny, t=1:length(time_range)
-            result[i, j, l, t] = _data[i, j, 1, t] * upper_layer_wgt
-                               + _data[i, j, 2, t] * lower_layer_wgt
+            result[i, j, l, t] = _data[i, j, 1, t] * upper_layer_wgt + _data[i, j, 2, t] * lower_layer_wgt
         end
     end
 
@@ -174,6 +175,7 @@ Dataset(parsed["input-file"], "r") do ds
         defDim(ods, "time", Inf)
 
         for (varname, vardata, vardim, attrib) in [
+            ("time",  ds["time"][time_range]  |> nomissing, ("time",), ds["time"].attrib),
             ("lat",  ds[parsed["lat"]][:]  |> nomissing, ("Nx", "Ny"), Dict()),
             ("lon",  ds[parsed["lon"]][:]  |> nomissing, ("Nx", "Ny"), Dict()),
             ("lev_targets", lev_targets, ("lev_targets",), Dict()),
