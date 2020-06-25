@@ -10,7 +10,7 @@ julia interpolate_model.jl \
     --lev          "lev"        \
     --lev-unit     "cm"         \
     --lev-target   50           \
-    --time-range   1,12         
+    --time-range   1,120
 
 
 

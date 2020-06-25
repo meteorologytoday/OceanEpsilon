@@ -11,6 +11,7 @@ module DataReader
         varnames :: Union{String, Array},
         year_rng :: Union{Tuple, Array},
         idxes...;
+        
         verbose=true,
         return_filenames=false,
     )
@@ -47,9 +48,10 @@ module DataReader
         flag_1s = [true for _ in 1:length(varnames)]  # flags to indicate reading first batch of data
 
         casename, filenames, file_year_rngs = statDirectory(dir)
-
+        
         for y in beg_year:end_year
             index = searchIndex(y, file_year_rngs)
+
             filename = filenames[index]
             file_year_rng = file_year_rngs[index]
 
@@ -114,10 +116,10 @@ module DataReader
         end_year = -1
 
         all_files = sort(readdir(dir))
-
+        
         valid_filenames = []
         year_rngs = []
-
+        
         for (i, filename) in enumerate(all_files)
 
             filename = basename(filename)
@@ -136,11 +138,13 @@ module DataReader
 #                    println(format("First_year {}, last_year {}, years_per_file: {}", first_year, last_year, years_per_file))
                 end
             end
-
+            
             m = match(pattern_general, filename)
-
+            
             if m == nothing
+                
                 continue
+                
             else
 
                 first_year = parse(Int64, m.captures[1])
@@ -158,7 +162,11 @@ module DataReader
                 push!(year_rngs, (first_year, last_year))
             end
         end
- 
+        
+        if length(valid_filenames) == 0
+            throw(ErrorException("Error: No valid file!"))
+        end
+         
         return casename,  valid_filenames, year_rngs
     end
 end

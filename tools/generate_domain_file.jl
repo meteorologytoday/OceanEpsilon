@@ -3,6 +3,37 @@ using NCDatasets
 using ArgParse
 using JSON
 
+function adjustLev(
+    lev  :: AbstractArray,
+    unit :: String,
+)
+    factor = Dict(
+        "m"  => 1.0,
+        "cm" => .01,
+    )[unit]
+
+    # check if lev is all positive or all negative
+    if ! ( all(lev .>= 0) || all(lev .<= 0) ) 
+        println("Warning: Not all levs are positive or negative")
+    end
+
+
+    if all(lev .<= 0)
+        factor *= -1
+    end
+    
+    lev = lev * factor
+
+    Δlev = lev[2:end] - lev[1:end-1]
+
+    if any(Δlev .<= 0)
+        throw(ErrorException("Lev is not monitically increasing with indices."))
+    end
+
+    return lev
+end
+
+
 #include("PolelikeCoordinate.jl")
 
 function parse_commandline()
@@ -56,6 +87,11 @@ function parse_commandline()
             arg_type = String
             required = true
 
+        "--lev-unit"
+            help = "Unit of lev. Can be `m` or `cm`."
+            arg_type = String
+            required = true
+
     end
 
     return parse_args(ARGS, s)
@@ -65,11 +101,19 @@ parsed = parse_commandline()
 print(json(parsed, 4))
 
 
+
 Dataset(parsed["input-file"], "r") do ds
 
     global lev_b = nomissing(ds[parsed["lev-b"]][:])
     global lev_c = nomissing(ds[parsed["lev-c"]][:])
-   
+  
+
+    lev_c = adjustLev(lev_c, parsed["lev-unit"])
+    lev_b[1, :] = adjustLev(lev_b[1, :], parsed["lev-unit"])
+    lev_b[2, :] = adjustLev(lev_b[2, :], parsed["lev-unit"])
+
+
+ 
     global Nz = length(lev_c)
     global Nb = size(lev_b)[1]
 
@@ -99,6 +143,16 @@ Dataset(parsed["input-file"], "r") do ds
 
         global lon_v = zeros(Float64, 4, Nx, Ny)
         global lat_v = similar(lon_v)
+
+        if any( ( _lat_bnd[1, 2:end] - _lat_bnd[1, 1:end-1] ) .< 0 )
+
+            throw(ErrorException("Error: latitude not increasing monotonically"))
+
+        elseif any( ( _lon_bnd[1, 2:end] - _lon_bnd[1, 1:end-1] ) .< 0 )
+
+            throw(ErrorException("Error: longitude not increasing monotonically"))
+
+        end
 
         for i=1:Nx, j=1:Ny
 
