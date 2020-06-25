@@ -12,3 +12,5 @@ years=5
 
 domain_dir=domains
 data_dir=data
+output_dir=result
+tmp_dir=tmp

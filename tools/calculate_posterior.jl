@@ -3,18 +3,19 @@ using NCDatasets
 using ArgParse
 using JSON
 using Distributed
+using SharedArrays
 
 function parse_commandline()
 
     s = ArgParseSettings()
     @add_arg_table s begin
 
-        "--input-dir"
+        "--input-file"
             help = "Input directory."
             arg_type = String
             required = true
  
-        "--output-file"
+        "--output-dir"
             help = "Output file of posterior."
             arg_type = String
             required = true
@@ -24,28 +25,35 @@ function parse_commandline()
             arg_type = String
             required = true
 
-
     end
 
     return parse_args(ARGS, s)
 end
 
-parsed = parse_commandline()
-print(json(parsed))
+local_parsed = parse_commandline()
+print(json(local_parsed, 4))
 
-@everywhere parsed = parsed 
-@everywhere include("worker_include.jl")
+wkrs = workers()
+nwkrs = length(wkrs)
 
-y_rng = 1:100
+for p in wkrs
+    @spawnat p let
+        global parsed = local_parsed 
+    end
+end
 
-mkpath("output")
+@everywhere include(joinpath( @__DIR__ , "worker_include.jl"))
+
+y_rng = 1:5
+
+mkpath(parsed["output-dir"])
 
 # doing Bayesian
 N   = 201
 ϵ   = range(0.5, 2.5, length=N) / 86400.0
 Δϵ  = ϵ[2] - ϵ[1]
 
-lat_flag = ( lat .>=  -20.0 ) .& ( lat .<= 20.0 )
+#lat_flag = ( lat .>=  -20.0 ) .& ( lat .<= 20.0 )
 
 σ_w = 1e-4  # 1cm/day tolerance
 
@@ -56,21 +64,22 @@ total_years = y_rng[end] - y_rng[1] + 1
 
 # Distribute jobs
 njob = Int64(total_years)
-wkrs = workers()
-nwkrs = length(wkrs)
 ptr = 1
 
 println("Initializing workers: ")
-@sync for p in wkrs 
+for p in wkrs
     @spawnat p let
-        worker_init(
-            data_file   = format("data/input.{:s}.nc", parse["model"]),
-            domain_file = format("domains/domain.{:s}.nc", parse["model"])
-            output_prefix = parse["model"],
-            ϵ = ϵ,
-        ) 
+        global data_file = parsed["input-file"]
+        global gi = loadDomain(parsed["domain-file"])
+        global output_dir = parsed["output-dir"]
+        global w  = zeros(Float64, gi.Nx, gi.Ny)
+        global ϵ = copy(ϵ)
+        global Nϵ = length(ϵ)
+
+        global mask = ( -10 .<= gi.c_lat .<= 10 )
     end
 end
+
 
 
 println("workers: ", wkrs)

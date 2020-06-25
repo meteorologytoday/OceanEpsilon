@@ -168,8 +168,10 @@ Dataset(parsed["input-file"], "r") do ds
 
         end
 
-        global lon_c = repeat(view(_lon_c, :, 1), outer=(1, Ny))
-        global lat_c = repeat(view(_lat_c, 1, :), outer=(Nx, 1))
+
+
+        global lon_c = repeat(reshape(_lon_c, :, 1), outer=(1, Ny))
+        global lat_c = repeat(reshape(_lat_c, 1, :), outer=(Nx, 1))
 
     else
         throw(ErrorException("Unexpected vertices: " * string(Nv)))
