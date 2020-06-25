@@ -39,11 +39,17 @@ function parse_commandline()
             arg_type = String
             required = true
  
-        "--models"
+        "--model"
             help = "Name of target variables, split by comma `,`."
             arg_type = String
             required = true
  
+        "--output-file"
+            help = "Output file."
+            arg_type = String
+            required = true
+        
+
         "--vars"
             help = "Name of target variables, split by comma `,`."
             arg_type = String
@@ -64,7 +70,6 @@ print(json(parsed, 4))
 
 time_range = parse.(Int64, split(parsed["time-range"], ","))
 varnames   = String.(split(parsed["vars"], ","))
-models     = String.(split(parsed["models"], ","))
 
 Dataset(parsed["domain-file"], "r") do ds
     global Nx = ds.dim["Nx"]
@@ -76,29 +81,25 @@ Nt = 12*(time_range[2] - time_range[1] + 1)
 data = Dict()
 
 println("Output result... ")
-for model in models
 
-    output_file = format("data/input.{:s}.nc", model)
 
-    Dataset(output_file, "c") do ds
-        
-        defDim(ds, "Nx", Nx)
-        defDim(ds, "Ny", Ny)
-        defDim(ds, "time", Inf)
-        
-        for varname in varnames
-             
-            var = defVar(ds, varname, Float64, ("Nx", "Ny", "time",))
-            var.attrib["_FillValue"] = 1e20
-             
-            var[:, :, 1:Nt] = DataReader.getData(
-                 format("cmip_data/{:s}/{:s}", model, varname),
-                 varname,
-                 time_range,
-                 (:, :),
-            )
-            
-        end
+Dataset(parsed["output-file"], "c") do ds
+    
+    defDim(ds, "Nx", Nx)
+    defDim(ds, "Ny", Ny)
+    defDim(ds, "time", Inf)
+    
+    for varname in varnames
+         
+        var = defVar(ds, varname, Float64, ("Nx", "Ny", "time",))
+        var.attrib["_FillValue"] = 1e20
+         
+        var[:, :, 1:Nt] = DataReader.getData(
+             format("cmip_data/{:s}/{:s}", parsed["model"], varname),
+             varname,
+             time_range,
+             (:, :),
+        )
         
     end
     

@@ -21,24 +21,33 @@ for i in $(seq 1 $((${#infos[@]}/11))); do
     echo "Doing model: $model"
  
 
+    file1="${data_dir}/input.${model}.tauo.nc"
+    file2="${data_dir}/input.${model}.wo.nc"
+    file_final="${data_dir}/input.${model}.nc"
+
 
     julia tools/gather_data.jl                                  \
-        --models       "$model"                                 \
+        --model        "$model"                                 \
         --domain-file  "${domain_dir}/domain.${model}.nc"       \
+        --output-file  "$file1"                                 \
         --vars         "tauuo,tauvo"                            \
         --time-range   "${beg_year},$(( beg_year + years - 1 ))"
 
   
-    if [ ]; then 
     julia tools/interpolate_model.jl                            \
         --input-dir    "cmip_data/${model}/wo"                  \
         --domain-file  "${domain_dir}/domain.${model}.nc"       \
-        --output-file  "${data_dir}/input.${model}.nc"          \
+        --output-file  "$file2"                                 \
         --var          "wo"                                     \
         --lev-target   50                                       \
         --time-range   "${beg_year},$(( beg_year + years - 1 ))"
     
-     fi
+
+
+    ncks -A -v tauuo,tauvo $file1 $file2
+
+    rm $file1
+    mv $file2 $file_final
 
 done
 
