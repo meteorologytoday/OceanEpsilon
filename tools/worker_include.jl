@@ -118,7 +118,7 @@ end
 function work(;
     year     :: Int64,
 )
-    global gi, w, ϵ, mask
+    global gi, w, ϵ, Nϵ, mask
     
 
  
@@ -133,7 +133,7 @@ function work(;
         output_file = format("{:s}/epsilon_log_posterior_{:03d}-{:02d}.nc", output_dir, year, m)
 
         if isfile(output_file)
-            println("output already exists. Job skipped.")
+            println("[", output_file,"] already exists. Job skipped.")
             return
         end
      

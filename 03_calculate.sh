@@ -27,7 +27,7 @@ for i in $(seq 1 $((${#infos[@]}/11))); do
 
     mkdir $output_dir
 
-    julia tools/calculate_posterior.jl \
+    julia -p 3 tools/calculate_posterior.jl \
         --input-file  "$input_file"    \
         --output-dir  "$model_output_dir"   \
         --domain-file "$domain_file"   
