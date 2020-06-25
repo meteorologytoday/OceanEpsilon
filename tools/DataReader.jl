@@ -12,6 +12,7 @@ module DataReader
         year_rng :: Union{Tuple, Array},
         idxes...;
         verbose=true,
+        return_filenames=false,
     )
         
         beg_year, end_year = year_rng
@@ -82,7 +83,11 @@ module DataReader
 
         end 
 
-        return (only_one_variable) ? datas[1] : datas
+        if return_filenames 
+            return ((only_one_variable) ? datas[1] : datas), filenames
+        else    
+            return (only_one_variable) ? datas[1] : datas
+        end
     end
 
     function searchIndex(

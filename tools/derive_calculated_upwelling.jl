@@ -7,12 +7,14 @@ using .DataReader
 
 cmip_root = "/glade/collections/cmip/CMIP6/CMIP"
 
-tauuo = DataReader.getData(
+tauuo, filenames = DataReader.getData(
     format("{:s}/NCAR/CESM2/piControl/r1i1p1f1/Omon/tauuo/gn/latest/", cmip_root),
     "tauuo",
     (795, 805),
     (:, :);
+    return_filenames=true
 )
+
 
 Nx, Ny, Nt = size(tauuo)
 
