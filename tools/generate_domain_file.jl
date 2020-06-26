@@ -55,6 +55,11 @@ function parse_commandline()
             help = "Number of vertices of each horizontal grid"
             arg_type = Int64
             required = true
+ 
+        "--vertices-type"
+            help = "Type of vertices arrangement. CESM is the `A`. CanESM is `B`. MPI is `C`."
+            arg_type = String
+            required = true
             
         "--lat-v"
             help = "Varname of latitude on grid vertices."
@@ -100,7 +105,9 @@ end
 parsed = parse_commandline()
 print(json(parsed, 4))
 
-
+if ! (parsed["vertices-type"] in ["A", "B", "C"])
+    throw(ErrorException("Error: Unexpected value of `vertices-type`. Only `A`, `B` or `C` is allowed."))
+end
 
 Dataset(parsed["input-file"], "r") do ds
 
@@ -182,6 +189,44 @@ Dataset(parsed["input-file"], "r") do ds
     global Nv, Nx, Ny = size(lon_v)
     
 end 
+
+if parsed["vertices"] == 4
+
+    # Type A (CESM)
+    #
+    # 4--3
+    # |  |
+    # 1--2
+
+    # Type B (CanESM)
+    #
+    # 4--1
+    # |  |
+    # 3--2
+
+    # Type C (MPI)
+    #
+    # 1--4
+    # |  |
+    # 2--3
+
+
+
+    if parsed["vertices-type"] == "B"
+        
+        for i=1:Nx, j=1:Ny
+            lat_v[1, i, j], lat_v[3, i, j] = lat_v[3, i, j], lat_v[1, i, j]
+            lon_v[1, i, j], lon_v[3, i, j] = lon_v[3, i, j], lon_v[1, i, j]
+        end
+
+    elseif parsed["vertices-type"] == "C"
+            
+        lat_v = circshift(lat_v, (-1, 0, 0))
+        lon_v = circshift(lon_v, (-1, 0, 0))
+        
+    end
+
+end
 
 #=
 gi = CurvilinearSphericalGridInfo(;

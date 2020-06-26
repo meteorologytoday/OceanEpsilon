@@ -10,6 +10,11 @@ function parse_commandline()
     s = ArgParseSettings()
     @add_arg_table s begin
 
+        "--years"
+            help = "Years"
+            arg_type = Int64
+            required = true
+ 
         "--input-file"
             help = "Input directory."
             arg_type = String
@@ -42,7 +47,7 @@ for p in procs()
     @spawnat p let
 
         global parsed = local_parsed 
-        global y_rng = 1:5
+        global y_rng = 1:parsed["years"]
         global N   = 201
         global ϵ   = range(0.5, 2.5, length=N) / 86400.0
         global Δϵ  = ϵ[2] - ϵ[1]
@@ -56,7 +61,8 @@ for p in procs()
         global output_dir = parsed["output-dir"]
         global w  = zeros(Float64, gi.Nx, gi.Ny)
 
-        global mask = ( -10 .<= gi.c_lat .<= 10 )
+        _lon = mod.(gi.c_lon, 360.0) # need 160E ~ 90W
+        global mask = (( -5 .<= gi.c_lat .<= 5 ) .& ( 160 .<= _lon .<= (360-90) ))
 
     end
 end

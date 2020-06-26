@@ -189,11 +189,22 @@ function work(;
 end
 
 
-data_file = "data/input.NCAR_CESM2.nc"
-gi = loadDomain("domains/domain.NCAR_CESM2.nc")
+#data_file = "data/input.CanESM5.nc"
+#gi = loadDomain("domains/domain.CanESM5.nc")
 
-data_file = "data/input.E3SM.nc"
-gi = loadDomain("domains/domain.E3SM.nc")
+#data_file = "data/input.E3SM.1-1.nc"
+#gi = loadDomain("domains/domain.E3SM.1-1.nc")
+
+model = "UA.MCM-UA-1-0"
+model = "SNU.SAM0-UNICORN"
+model = "EC-Earth-Consortium.EC-Earth3"
+model = "MPI.ESM1-2-LR"
+model = "MOHC.HadGEM3-GC31-LL"
+#model = "CNRM-CERFACS.CNRM-ESM2-1"
+data_file = format("data/input.{:s}.nc", model)
+gi = loadDomain(format("domains/domain.{:s}.nc", model))
+
+
 
 
 w  = zeros(Float64, gi.Nx, gi.Ny)

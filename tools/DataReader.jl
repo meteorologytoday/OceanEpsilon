@@ -101,6 +101,8 @@ module DataReader
                 return i
             end
         end
+
+        throw(ErrorException(format("Error: Cannot find index of year: {:d}", y)))
     end
 
 
@@ -162,11 +164,10 @@ module DataReader
                 push!(year_rngs, (first_year, last_year))
             end
         end
-        
+       
         if length(valid_filenames) == 0
             throw(ErrorException("Error: No valid file!"))
         end
-         
         return casename,  valid_filenames, year_rngs
     end
 end

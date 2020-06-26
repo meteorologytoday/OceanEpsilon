@@ -11,8 +11,13 @@ import numpy as np
 
 
 models = [
-    "NCAR_CESM2",
-    "E3SM",
+    "MPI.ESM1-2-LR",
+    "EC-Earth-Consortium.EC-Earth3",
+    "NCAR.CESM2",
+    "E3SM.1-1",
+    "SNU.SAM0-UNICORN",
+    "CanESM5",
+    "UA.MCM-UA-1-0",
 ]
 
 log_post = {}
@@ -22,16 +27,18 @@ max_eps = {}
 max_post = {}
 
 beg_y = 1
-end_y = 2
+end_y = 4
 
-init = True
+
+
+_log_post = None
 
 for model in models:
 
-
-
+    init = True
+                
     for y in range(beg_y,end_y+1):
-        print("Doing year: %d" % (y,))
+        print("Loading year %d of model %s" % (y, model,))
         for m in range(1, 13):
             with Dataset("result/%s/epsilon_log_posterior_%03d-%02d.nc" % (model, y, m), "r") as f:
                 if init == True:
